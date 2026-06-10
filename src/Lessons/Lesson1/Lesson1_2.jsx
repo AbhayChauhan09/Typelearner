@@ -1,0 +1,279 @@
+import React, { useEffect, useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
+
+// Image Assets
+import lessonKeyboard from "../../assets/lesson1.png";
+
+const practiceKeys = ["a", "s", "d", "f", "j", "k", "l", ";"];
+
+export default function Lesson1_2() {
+  const navigate = useNavigate();
+
+  // State Management
+  const [typed, setTyped] = useState("");
+  const [correctCount, setCorrectCount] = useState(0);
+  const [wrongCount, setWrongCount] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(15); // 15-second blitz for Home Row keys
+  const [gameOver, setGameOver] = useState(false);
+  const [startTime, setStartTime] = useState(null);
+  const [wrongKeyLog, setWrongKeyLog] = useState("");
+  const [showPopup, setShowPopup] = useState(false);
+
+  const mainDivRef = useRef(null);
+
+  useEffect(() => {
+    if (mainDivRef.current) {
+      mainDivRef.current.focus();
+    }
+  }, []);
+
+  /* TIMER LOGIC */
+  useEffect(() => {
+    if (!startTime || gameOver) return;
+
+    const timer = setInterval(() => {
+      setTimeLeft((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          setGameOver(true);
+          setShowPopup(true);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [startTime, gameOver]);
+
+  const handleKeyDown = (e) => {
+    /* HANDLE POPUP NAVIGATION */
+    if (showPopup) {
+      if (e.key === " ") {
+        e.preventDefault();
+        navigate("/lesson1/1.3");
+      }
+      return;
+    }
+
+    if (gameOver) return;
+
+    const key = e.key;
+    const currentIndex = typed.length;
+
+    /* START TIMER ON FIRST KEY */
+    if (!startTime) {
+      setStartTime(Date.now());
+    }
+
+    /* BACKSPACE HANDLER */
+    if (key === "Backspace") {
+      e.preventDefault();
+      setTyped((prev) => prev.slice(0, -1));
+      setWrongKeyLog("");
+      return;
+    }
+
+    /* ALLOWED INPUT CHARACTER TRACKING */
+    if (key.length === 1 || key === " ") {
+      e.preventDefault();
+
+      if (currentIndex >= practiceKeys.length) return;
+
+      const expectedChar = practiceKeys[currentIndex];
+      const typedChar = key; 
+
+      // Case-sensitive verification
+      const isCorrect = typedChar === expectedChar;
+
+      if (isCorrect) {
+        const updatedTyped = typed + typedChar;
+        setTyped(updatedTyped);
+        setCorrectCount((prev) => prev + 1);
+        setWrongKeyLog("");
+
+        /* CHECK LESSON COMPLETION */
+        if (updatedTyped.length === practiceKeys.length) {
+          setGameOver(true);
+          setShowPopup(true);
+        }
+      } else {
+        /* WRONG KEY LOGIC */
+        setWrongCount((prev) => prev + 1);
+        
+        let displayInstruction = typedChar === " " ? "SPACE" : typedChar;
+
+        // Custom alert if user is typing capital letters for lowercase targets
+        if (
+          typedChar !== " " && 
+          expectedChar !== " " && 
+          typedChar === typedChar.toUpperCase() && 
+          expectedChar === expectedChar.toLowerCase()
+        ) {
+          displayInstruction = "YOU TYPED IN CAPITAL LETTERS";
+        }
+
+        setWrongKeyLog(displayInstruction);
+      }
+    }
+  };
+
+  /* ANALYTICS CALCULATIONS */
+  const totalAttempts = correctCount + wrongCount;
+  const accuracy = totalAttempts === 0 ? 100 : Math.round((correctCount / totalAttempts) * 100);
+  const minutes = (15 - timeLeft) / 60 || 0.1;
+  const wpm = Math.round((correctCount / 5) / minutes);
+
+  const nextTargetChar = practiceKeys[typed.length]?.toUpperCase();
+
+  return (
+    <div
+      tabIndex={0}
+      onKeyDown={handleKeyDown}
+      ref={mainDivRef}
+      className="min-h-screen w-full bg-[#0A0D1A] text-white flex flex-col items-center outline-none px-8 pb-8 select-none"
+    >
+      {/* Header Area */}
+      <div className="w-full max-w-[1400px] mx-auto flex justify-between items-center mb-6 mt-4">
+        <div className="flex gap-4">
+          <button
+            onClick={() => navigate("/lesson1/1.1")}
+            className="px-5 py-2 bg-[#111A31] border border-[#232F4D] rounded-xl text-md hover:bg-[#1C2744] transition flex items-center gap-2 font-medium shadow-sm"
+          >
+            <span>←</span> Back to Intro
+          </button>
+        </div>
+      </div>
+
+      {/* Page Title */}
+      <h1 className="text-4xl font-bold tracking-wide text-center w-full max-w-[1400px] mx-auto mb-12">
+        Lesson 1.2 — Home Row Practice
+      </h1>
+
+      {/* Main Dashboard Grid */}
+      <div className="w-full max-w-[1400px] mx-auto grid grid-cols-[180px_1fr_240px] gap-8 items-start">
+        
+        {/* LEFT COLUMN: STATS */}
+        <div className="flex flex-col gap-5">
+          <div className="bg-[#111827] border border-[#2b3245] rounded-3xl p-6 shadow-xl text-center">
+            <p className="text-gray-400 text-sm mb-1 uppercase tracking-tighter">Time</p>
+            <h2 className="text-4xl font-bold text-[#7ED321]">{timeLeft}s</h2>
+          </div>
+          <div className="bg-[#111827] border border-[#2b3245] rounded-3xl p-6 shadow-xl text-center">
+            <p className="text-gray-400 text-sm mb-1 uppercase tracking-tighter">Accuracy</p>
+            <h2 className="text-4xl font-bold text-[#7ED321]">{accuracy}%</h2>
+          </div>
+          <div className="bg-[#111827] border border-[#2b3245] rounded-3xl p-6 shadow-xl text-center">
+            <p className="text-gray-400 text-sm mb-1 uppercase tracking-tighter">WPM</p>
+            <h2 className="text-4xl font-bold text-[#7ED321]">{wpm}</h2>
+          </div>
+        </div>
+
+        {/* CENTER COLUMN: HARDWARE & PRACTICE */}
+        <div className="flex flex-col gap-6 w-full">
+          {/* Top Panel: Keyboard Reference */}
+          <div className="grid grid-cols-[1fr_minmax(400px,460px)] gap-6 items-center bg-[#111827] border border-[#2b3245] rounded-[32px] p-6 shadow-xl">
+            <div className="bg-[#0A0D1A]/60 border border-[#1f293d] rounded-2xl p-4 flex flex-wrap gap-2.5 justify-center">
+              {practiceKeys.map((key) => (
+                <div
+                  key={key}
+                  className={`w-11 h-11 rounded-xl flex items-center justify-center text-lg font-bold transition-all border shadow-md
+                    ${nextTargetChar === key.toUpperCase() 
+                      ? "bg-purple-600 border-purple-400 text-white scale-110 shadow-purple-900/40" 
+                      : "bg-[#1F2A44] border-[#2b3245] text-gray-400"}
+                  `}
+                >
+                  {key.toUpperCase()}
+                </div>
+              ))}
+            </div>
+
+            <div className="bg-[#050816] p-3 rounded-2xl border border-[#222] flex flex-col items-center">
+              <img src={lessonKeyboard} alt="Keyboard map" className="w-full h-auto max-h-[160px] object-contain rounded-xl" />
+              <span className="text-[10px] text-gray-500 mt-1 font-mono uppercase tracking-widest">Hardware Reference</span>
+            </div>
+          </div>
+
+          {/* Practice Box */}
+          <div className="bg-[#02040f] border border-[#1b2236] rounded-[32px] shadow-2xl flex flex-col items-center justify-center relative p-12 h-[340px]">
+            <div className="flex gap-4 mb-8">
+              {practiceKeys.map((char, index) => (
+                <span 
+                  key={index}
+                  className={`text-6xl font-black font-mono transition-all duration-200
+                    ${index < typed.length ? "text-[#7ED321]" : index === typed.length ? "text-purple-500 scale-125 underline underline-offset-8" : "text-gray-700"}
+                  `}
+                >
+                  {char.toUpperCase()}
+                </span>
+              ))}
+            </div>
+
+            <div className="w-full max-w-[400px] h-1 bg-[#1A1D26] rounded-full overflow-hidden">
+               <div 
+                  className="h-full bg-purple-500 transition-all duration-500" 
+                  style={{ width: `${(typed.length / practiceKeys.length) * 100}%` }}
+               />
+            </div>
+          </div>
+        </div>
+
+        {/* RIGHT COLUMN: ANALYTICS PANEL */}
+        <div className="flex flex-col gap-4 w-full">
+          <div className="bg-[#111827] border border-[#2b3245] rounded-3xl p-4 shadow-xl flex flex-col items-center justify-center min-h-[160px]">
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-widest mb-1">Target Key</p>
+            <h2 className="text-7xl font-black text-[#7ED321] font-mono">{nextTargetChar || "—"}</h2>
+          </div>
+
+          <div className="bg-[#0f172a] border border-[#2b3245] rounded-2xl p-4 shadow-inner flex flex-col min-h-[145px] justify-between">
+            <div className="flex items-center gap-2 w-full justify-center border-b border-gray-800 pb-2">
+              <span className="text-red-500">⚠️</span>
+              <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Wrong Keys Log</p>
+            </div>
+            
+            {!wrongKeyLog ? (
+              <p className="text-gray-600 text-xs my-auto italic text-center">No active errors</p>
+            ) : (
+              <div className="flex justify-center items-center h-full pt-2">
+                <span className={`font-mono font-black rounded-xl shadow-md transition-all text-center leading-tight
+                    ${wrongKeyLog === "YOU TYPED IN CAPITAL LETTERS" 
+                      ? "bg-amber-950 text-amber-400 border-2 border-amber-600 text-[10px] px-3 py-2 font-sans font-bold tracking-wide" 
+                      : "bg-red-950 text-red-400 border-2 border-red-600 px-5 py-3 text-3xl"
+                    }
+                  `}>
+                  {wrongKeyLog}
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* POPUP MODAL */}
+      {showPopup && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 backdrop-blur-sm">
+          <div className="bg-[#02040f] border border-[#1b2236] rounded-[35px] p-10 flex flex-col items-center shadow-2xl text-center">
+            <h2 className="text-5xl font-bold text-purple-500 mb-6 tracking-wide">Lesson Complete! ⚔️</h2>
+            <div className="flex gap-12 mb-10">
+               <div>
+                 <p className="text-gray-400 text-xs uppercase mb-1">Accuracy</p>
+                 <p className="text-3xl font-black">{accuracy}%</p>
+               </div>
+               <div>
+                 <p className="text-gray-400 text-xs uppercase mb-1">WPM</p>
+                 <p className="text-3xl font-black">{wpm}</p>
+               </div>
+            </div>
+            <button
+              onClick={() => navigate("/lesson1/1.3")}
+              className="bg-purple-600 text-white px-10 py-4 rounded-2xl text-xl font-bold hover:bg-purple-500 transition shadow-lg shadow-purple-900/20"
+            >
+              Next Lesson →
+            </button>
+            <p className="text-gray-500 text-sm mt-4 italic">Press [SPACE] to continue</p>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
