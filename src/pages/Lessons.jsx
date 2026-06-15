@@ -1,8 +1,11 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { fetchProgress } from "../lib/api";
 
 function Lessons() {
   const navigate = useNavigate();
+  const [unlockedLesson, setUnlockedLesson] = useState(1);
+  const [completedLessons, setCompletedLessons] = useState([]);
 
   const lessons = [
     { id: 1, title: "Home Row Basics", description: "Learn finger placement and home row typing.", level: "BEGINNER" },
@@ -19,7 +22,22 @@ function Lessons() {
     { id: 12, title: "Practice Z and X keys", description: "Mastering the downward left hand stretches.", level: "ADVANCED" },
   ];
 
+  useEffect(() => {
+    fetchProgress()
+      .then((data) => {
+        setCompletedLessons(data.completedLessons || []);
+        setUnlockedLesson(data.unlockedLesson || 1);
+      })
+      .catch(() => {
+        setUnlockedLesson(1);
+      });
+  }, []);
+
+  const canAccessLesson = (id) => id <= unlockedLesson;
+
   const handleLessonClick = (id) => {
+    if (!canAccessLesson(id)) return;
+
     if (id === 1) navigate("/lesson1/1.1");
     else if (id === 2) navigate("/lesson2/2.1");
     else if (id === 3) navigate("/lesson3/3.1");
@@ -98,11 +116,18 @@ function Lessons() {
         </div>
 
         <div className="w-full grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 box-border">
-          {lessons.map((lesson) => (
+          {lessons.map((lesson) => {
+            const isLocked = !canAccessLesson(lesson.id);
+
+            return (
             <div
               key={lesson.id}
               onClick={() => handleLessonClick(lesson.id)}
-              className="w-full bg-[#080914]/80 backdrop-blur-xl border border-[#1e1f38] rounded-xl p-5 cursor-pointer transition-all duration-300 hover:border-purple-600/50 hover:bg-[#0c0d1e]/90 flex flex-row items-center gap-5 group box-border"
+              className={`w-full bg-[#080914]/80 backdrop-blur-xl border rounded-xl p-5 transition-all duration-300 flex flex-row items-center gap-5 group box-border ${
+                isLocked
+                  ? 'border-[#2b3245] opacity-70 cursor-not-allowed'
+                  : 'border-[#1e1f38] cursor-pointer hover:border-purple-600/50 hover:bg-[#0c0d1e]/90'
+              }`}
             >
               <div className="shrink-0 w-[72px] h-[72px] rounded-xl border border-[#2a2b4a] bg-[#0b0c1a] flex items-center justify-center group-hover:border-purple-500/40 transition-colors duration-300">
                 {renderIcon(lesson.id)}
@@ -115,7 +140,7 @@ function Lessons() {
                   </span>
                   
                   <span className="px-3 py-1 rounded-full border border-slate-700 bg-transparent text-slate-300 text-[9px] sm:text-[10px] font-bold tracking-wider shrink-0">
-                    {lesson.level}
+                    {isLocked ? 'LOCKED' : lesson.level}
                   </span>
                 </div>
 
@@ -124,17 +149,19 @@ function Lessons() {
                 </h3>
                 
                 <p className="text-xs sm:text-sm text-slate-400 mt-3 truncate">
-                  {lesson.description}
+                  {isLocked ? 'Complete the previous lesson to unlock this stage.' : lesson.description}
                 </p>
+                {completedLessons.includes(lesson.id) ? <span className="mt-2 text-[10px] uppercase tracking-[0.2em] text-emerald-400">Completed</span> : null}
               </div>
 
-              <div className="shrink-0 text-purple-600/60 group-hover:text-purple-400 transition-colors duration-300 pr-2">
+              <div className={`shrink-0 pr-2 ${isLocked ? 'text-slate-600' : 'text-purple-600/60 group-hover:text-purple-400'}`}>
                 <svg className="w-6 h-6 transform group-hover:translate-x-1 transition-transform duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                   <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
                 </svg>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
 
       </div>
