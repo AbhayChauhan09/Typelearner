@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { completeLesson } from "../../lib/api";
 
 // Image Assets
 import lessonKeyboard from "../../assets/lesson1.png";
@@ -91,6 +92,16 @@ export default function Lesson1_4() {
       }
     }
   }, [startTime, timeLeft, correctCount, gameOver, selectedDuration]);
+
+  const handleCompleteLesson = async () => {
+    try {
+      await completeLesson(1);
+    } catch (error) {
+      console.error("Could not save lesson progress", error);
+    } finally {
+      navigate("/lesson2/2.1");
+    }
+  };
 
   const handleKeyDown = (e) => {
     if (showPopup) {
@@ -522,7 +533,7 @@ export default function Lesson1_4() {
             {/* Structured Dual Action Grid Options */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full max-w-[500px]">
               <button
-                onClick={() => navigate("/Lesson2/2.1")}
+                onClick={handleCompleteLesson}
                 className="w-full bg-purple-600 text-white px-6 py-5 rounded-2xl text-lg font-black hover:bg-purple-500 active:scale-[0.98] transition shadow-lg shadow-purple-900/30 text-center"
               >
                 Next Lesson →
