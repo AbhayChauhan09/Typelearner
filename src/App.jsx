@@ -8,7 +8,7 @@ import Home from "./pages/Home";
 import Lessons from "./pages/Lessons";
 import Profile from "./pages/profile"; // Ensure this matches your file name exactly
 import NotFound from "./pages/NotFound";
-import KidsZone from "./pages/KidsZone";
+import Kidszone from "./pages/Kidszone";
 import Games from "./pages/Games";
 import BubbleGame from "./pages/BubbleGame";
 import EscapeGame from "./pages/EscapeGame";
@@ -80,7 +80,7 @@ function App() {
             <Route path="/profile" element={<Profile />} />
             <Route path="/login" element={<Profile />} />
 
-            <Route path="/kids" element={<KidsZone />} />
+            <Route path="/kids" element={<Kidszone />} />
             <Route path="/games" element={<Games />} />
             <Route path="/games/bubble" element={<BubbleGame />} />
             <Route path="/games/survival" element={<EscapeGame />} />
