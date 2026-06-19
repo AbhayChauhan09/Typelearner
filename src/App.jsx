@@ -54,8 +54,8 @@ import Lesson8_4 from "./Lessons/Lesson8/Lesson8_4";
 import Lesson9_1 from "./Lessons/Lesson9/Lesson9_1";
 import Lesson9_2 from "./Lessons/Lesson9/Lesson9_2";
 
-import Lesson10_1 from "./Lessons/temp_Lesson10/Lesson10_1";
-import Lesson10_2 from "./Lessons/temp_Lesson10/Lesson10_2";
+import Lesson10_1 from "./Lessons/Lesson10/Lesson10_1";
+import Lesson10_2 from "./Lessons/Lesson10/Lesson10_2";
 
 import Lesson11_1 from "./Lessons/Lesson11/Lesson11_1";
 import Lesson11_2 from "./Lessons/Lesson11/Lesson11_2";
