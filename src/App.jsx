@@ -6,7 +6,7 @@ import Navbar from "./components/layout/Navbar";
 // Pages
 import Home from "./pages/Home";
 import Lessons from "./pages/Lessons";
-import Profile from "./pages/profile"; // Ensure this matches your file name exactly
+import Profile from "./pages/Profile"; // Ensure this matches your file name exactly
 import NotFound from "./pages/NotFound";
 import Kidszone from "./pages/Kidszone";
 import Games from "./pages/Games";
