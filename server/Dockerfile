@@ -10,7 +10,7 @@ COPY server/package*.json ./
 RUN npm install
 
 # Copy everything from the server folder to /app
-COPY server/ .
+COPY  . .
 
 # Expose the port
 EXPOSE 3000
