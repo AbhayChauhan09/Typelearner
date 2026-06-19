@@ -22,7 +22,7 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Build and push Frontend (from root)
+      # Build and push Frontend
       - name: Build and push Frontend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -30,12 +30,11 @@ jobs:
           docker build -t $ECR_REGISTRY/typelearner-frontend:latest .
           docker push $ECR_REGISTRY/typelearner-frontend:latest
 
-      # Build and push Backend (from /server folder)
+      # Build and push Backend
       - name: Build and push Backend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
         run: |
-          docker build -t $ECR_REGISTRY/typelearner-backend:latest ./server
+          # Is command mein -f ka use karein taaki Dockerfile sahi jagah se uthe
+          docker build -f ./server/Dockerfile -t $ECR_REGISTRY/typelearner-backend:latest .
           docker push $ECR_REGISTRY/typelearner-backend:latest
-
-          # Triggering manual build)
