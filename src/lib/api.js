@@ -1,12 +1,30 @@
-const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
+/**
+ * Dynamically resolves the API base URL at runtime.
+ * This ensures that even if the JS bundle is cached, the code 
+ * will check window.ENV for the latest configuration.
+ */
+const getApiBase = () => {
+  // 1. Check if our runtime config exists
+  if (window.ENV && window.ENV.VITE_API_URL) {
+    return window.ENV.VITE_API_URL;
+  }
+  
+  // 2. If it doesn't exist, we force a check on the window object 
+  // explicitly to bypass any build-time constants
+  return 'http://18.212.243.128:3000/api';
+};
 function getToken() {
   return localStorage.getItem('typelearner_token');
 }
 
+/**
+ * Standardized request helper
+ */
 async function request(path, options = {}) {
   const token = getToken();
-  const response = await fetch(`${API_BASE}${path}`, {
+  const url = `${getApiBase()}${path}`;
+  
+  const response = await fetch(url, {
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
@@ -24,6 +42,7 @@ async function request(path, options = {}) {
   return data;
 }
 
+// API Methods
 export async function registerUser(payload) {
   return request('/auth/register', { method: 'POST', body: JSON.stringify(payload) });
 }

@@ -23,10 +23,14 @@ function Profile() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // FIXED: These paths now match your server/index.js routes exactly
+    // DYNAMIC URL RESOLUTION:
+    // This checks your window.ENV (injected by env-config.js) 
+    // and falls back to your EC2 IP if window.ENV isn't found.
+    const baseUrl = window.ENV?.VITE_API_URL || 'http://18.212.243.128:3000/api';
+    
     const endpoint = isLogin 
-      ? "http://localhost:3000/api/auth/login" 
-      : "http://localhost:3000/api/auth/register";
+      ? `${baseUrl}/auth/login` 
+      : `${baseUrl}/auth/register`;
     
     const payload = isLogin 
       ? { email, password } 
@@ -51,11 +55,11 @@ function Profile() {
       }
     } catch (error) {
       console.error("Connection error:", error);
-      alert("Could not connect to the server. Ensure the backend is running on port 3000.");
+      alert("Could not connect to the server. Ensure the backend is reachable.");
     }
   };
 
-  // 1. DASHBOARD VIEW (If logged in)
+  // 1. DASHBOARD VIEW
   if (savedUser) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#04050b] text-white p-6 pt-24">
@@ -73,7 +77,7 @@ function Profile() {
     );
   }
 
-  // 2. AUTHENTICATION VIEW (If NOT logged in)
+  // 2. AUTHENTICATION VIEW
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#04050b] p-6 pt-24">
       <div className="w-full max-w-md bg-[#080914]/90 backdrop-blur-xl border border-[#1e1f38] rounded-[32px] p-10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">

@@ -1,4 +1,4 @@
-import { useEffect } from "react" // 1. Import useEffect
+import { useEffect } from "react"
 import TypingStats from "./TypingStats"
 import TypingText from "./TypingText"
 import TypingInput from "./TypingInput"
@@ -37,13 +37,16 @@ function TypingTest() {
 
   const sessionEnded = timeLeft === 0 || isCompleted
 
-  // 2. Add useEffect to save performance when the session ends
   useEffect(() => {
     const savePerformance = async () => {
       const userId = localStorage.getItem('userId');
+      
+      // Dynamic base URL: Checks runtime config first, falls back to EC2 IP
+      const baseUrl = window.ENV?.VITE_API_URL || 'http://18.212.243.128:3000/api';
+
       if (sessionEnded && userId) {
         try {
-          await fetch('http://localhost:5000/api/save-performance', {
+          await fetch(`${baseUrl}/save-performance`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ userId, wpm, accuracy })
@@ -56,7 +59,7 @@ function TypingTest() {
     };
 
     savePerformance();
-  }, [sessionEnded, wpm, accuracy]); // Re-run if these values change
+  }, [sessionEnded, wpm, accuracy]);
 
   function handleRestart() {
     resetTyping()
