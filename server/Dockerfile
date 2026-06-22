@@ -3,17 +3,17 @@ FROM node:18-alpine
 # Set the working directory to /app
 WORKDIR /app
 
-# Copy the package.json and package-lock.json from the server folder
-COPY server/package*.json ./
+# Server folder se package files copy karein
+COPY package*.json ./
 
-# Install dependencies
+# Dependencies install karein
 RUN npm install
 
-# Copy everything from the server folder to /app
-COPY  . .
+# Server folder ka baaki code copy karein
+COPY . .
 
 # Expose the port
 EXPOSE 3000
 
-# Run index.js from the current directory (now that we copied the contents of server/)
+# Ab `index.js` mil jayega kyunki hum `server` folder ke andar hi hain
 CMD ["node", "index.js"]
