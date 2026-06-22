@@ -16,4 +16,4 @@ COPY . .
 EXPOSE 3000
 
 
-CMD ["ls", "-R", "/app"]
+CMD ["node", "server/index.js"]
