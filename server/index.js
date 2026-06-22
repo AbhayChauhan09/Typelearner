@@ -129,14 +129,20 @@ app.post('/api/progress/complete-lesson', async (req, res) => {
 });
 
 async function start() {
-  await initDb();
-  // Bound to 0.0.0.0 to be accessible outside the Docker container
+  let connected = false;
+  // Database ready hone ka wait karein
+  while (!connected) {
+    try {
+      await initDb();
+      console.log('Database initialized successfully');
+      connected = true;
+    } catch (error) {
+      console.error('Waiting for DB to be ready... Retrying in 5s', error.message);
+      await new Promise(resolve => setTimeout(resolve, 5000)); // 5 seconds wait
+    }
+  }
+
   app.listen(port, '0.0.0.0', () => 
     console.log(`TypeLearner API is running on port ${port}`)
   );
 }
-
-start().catch((error) => {
-  console.error('Failed to start server', error);
-  process.exit(1);
-});
