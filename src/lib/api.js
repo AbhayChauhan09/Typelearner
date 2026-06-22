@@ -1,7 +1,6 @@
 /**
  * Dynamically resolves the API base URL at runtime.
- * This ensures that even if the JS bundle is cached, the code 
- * will check window.ENV for the latest configuration.
+ * Now using a relative path '/api' so it routes through the Load Balancer.
  */
 const getApiBase = () => {
   // 1. Check if our runtime config exists
@@ -9,10 +8,10 @@ const getApiBase = () => {
     return window.ENV.VITE_API_URL;
   }
   
-  // 2. If it doesn't exist, we force a check on the window object 
-  // explicitly to bypass any build-time constants
-  return 'http://18.212.243.128:3000/api';
+  // 2. Pointing to /api so the ALB picks it up based on your routing rules
+  return '/api';
 };
+
 function getToken() {
   return localStorage.getItem('typelearner_token');
 }
