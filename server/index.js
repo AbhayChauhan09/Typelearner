@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 import pkg from 'pg';
 import dotenv from 'dotenv';
 
-// AWS ECS Fargate mein variables automatically process.env mein hote hain
+// Load environment variables
 dotenv.config();
 const { Pool } = pkg;
 
@@ -15,15 +15,19 @@ const port = 3000;
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// Database configuration: Agar DATABASE_URL set hai toh wo use karein, 
-// nahi toh individual variables use karein.
+// --- HEALTH CHECK ROUTE (Added for AWS ALB) ---
+app.get('/', (req, res) => {
+  res.status(200).json({ status: 'OK', message: 'TypeLearner API is running' });
+});
+// ----------------------------------------------
+
+// Database configuration
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 
     `postgresql://${process.env.DB_USER || 'postgres'}:${encodeURIComponent(process.env.DB_PASSWORD || 'postgres')}@${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'typing_app'}`,
 });
 
 async function initDb() {
-  // Test connection
   const client = await pool.connect();
   try {
     await client.query(`
@@ -48,8 +52,7 @@ async function initDb() {
   }
 }
 
-// ... (Baaki sabhi routes same rahenge: register, login, complete-lesson)
-// Yahan aapke purane routes paste kar dein
+// Routes (Yahan apne baki routes add karein, e.g., app.post('/register', ...))
 
 async function start() {
   console.log("Starting server...");
