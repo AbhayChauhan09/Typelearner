@@ -1,3 +1,4 @@
+import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
 // Layouts
@@ -6,7 +7,7 @@ import Navbar from "./components/layout/Navbar";
 // Pages
 import Home from "./pages/Home";
 import Lessons from "./pages/Lessons";
-import Profile from "./pages/Profile"; // Ensure this matches your file name exactly
+import UserProfile from "./pages/UserProfile";  
 import NotFound from "./pages/NotFound";
 import Kidszone from "./pages/Kidszone";
 import Games from "./pages/Games";
@@ -76,9 +77,9 @@ function App() {
             <Route path="/" element={<Home />} />
             <Route path="/lessons" element={<Lessons />} />
             
-            {/* AUTH & PROFILE ROUTES */}
-            <Route path="/profile" element={<Profile />} />
-            <Route path="/login" element={<Profile />} />
+            {/* UPDATED ROUTES */}
+            <Route path="/profile" element={<UserProfile />} />
+            <Route path="/login" element={<UserProfile />} />
 
             <Route path="/kids" element={<Kidszone />} />
             <Route path="/games" element={<Games />} />

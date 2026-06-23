@@ -1,11 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
-function Profile() {
+function UserProfile() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
-  
-  // 1. useState ko simple null rakho, koi parsing nahi
   const [savedUser, setSavedUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -13,30 +11,30 @@ function Profile() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  // 2. Data loading sirf useEffect mein, jo render hone ke baad chalta hai
+  // 1. SAFE LOAD: Component mount hote hi data check karo
   useEffect(() => {
-    const checkStorage = () => {
+    const loadUserData = () => {
       try {
-        const rawData = localStorage.getItem("typelearner_user");
-        // Sirf tabhi parse karo agar data valid JSON jaisa dikhe
+        const rawData = localStorage.getItem("typelearner_v2");
         if (rawData && rawData !== "undefined" && rawData !== "null") {
           setSavedUser(JSON.parse(rawData));
         }
       } catch (e) {
-        console.error("Storage corrupted, clearing...");
-        localStorage.removeItem("typelearner_user");
+        localStorage.removeItem("typelearner_v2");
       }
       setLoading(false);
     };
-    checkStorage();
+    loadUserData();
   }, []);
 
+  // 2. LOGOUT: Clear storage and reset state
   const handleLogout = () => {
     localStorage.clear();
     setSavedUser(null);
-    window.location.reload(); 
+    window.location.reload();
   };
 
+  // 3. SUBMIT: API Call with safer state management
   const handleSubmit = async (e) => {
     e.preventDefault();
     const baseUrl = window.ENV?.VITE_API_URL || 'http://18.212.243.128:3000/api';
@@ -55,23 +53,25 @@ function Profile() {
       if (response.ok) {
         localStorage.setItem("typelearner_token", data.token || "");
         const userObj = { username: data.username || username };
-        localStorage.setItem("typelearner_user", JSON.stringify(userObj));
+        // Using new key typelearner_v2
+        localStorage.setItem("typelearner_v2", JSON.stringify(userObj));
         setSavedUser(userObj);
       } else {
         alert(data.message || "Authentication failed.");
       }
     } catch (error) {
-      alert("Server error.");
+      alert("Server is currently unreachable.");
     }
   };
 
-  if (loading) return <div className="text-white text-center pt-20">Loading...</div>;
+  // 4. RENDERING LOGIC
+  if (loading) return <div className="text-white text-center pt-20">Initializing...</div>;
 
   if (savedUser) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#04050b] text-white p-6 pt-24">
         <h1 className="text-4xl font-bold mb-4">Welcome back, {savedUser.username}!</h1>
-        <button onClick={handleLogout} className="bg-red-600 px-8 py-3 rounded-xl font-bold transition">Sign Out</button>
+        <button onClick={handleLogout} className="bg-red-600 px-8 py-3 rounded-xl font-bold transition hover:bg-red-700">Sign Out</button>
       </div>
     );
   }
@@ -99,4 +99,4 @@ function Profile() {
     </div>
   );
 }
-export default Profile;
+export default UserProfile;
