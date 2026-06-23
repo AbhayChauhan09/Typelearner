@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import bcrypt from 'bcryptjs';  
 import pkg from 'pg';
 import dotenv from 'dotenv';
 
@@ -17,19 +18,39 @@ app.get('/', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'TypeLearner API is running' });
 });
 
- 
+// --- API ROUTES ---
 const apiRouter = express.Router();
 
-apiRouter.post('/auth/login', async (req, res) => {
-  // Yahan apna Login logic likhein
-  res.status(200).json({ message: "Login logic here" });
-});
-
+// Register Route
 apiRouter.post('/auth/register', async (req, res) => {
-  // Yahan apna Register logic likhein
-  res.status(200).json({ message: "Register logic here" });
+  const { username, email, password } = req.body;
+  try {
+    const password_hash = await bcrypt.hash(password, 10);
+    const result = await pool.query(
+      'INSERT INTO users (username, email, password_hash) VALUES ($1, $2, $3) RETURNING id',
+      [username, email, password_hash]
+    );
+    res.status(201).json({ message: 'User registered successfully' });
+  } catch (err) {
+    res.status(400).json({ message: err.message });
+  }
 });
 
+// Login Route
+apiRouter.post('/auth/login', async (req, res) => {
+  const { email, password } = req.body;
+  try {
+    const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+    if (result.rows.length === 0) return res.status(401).json({ message: 'Invalid credentials' });
+    
+    const valid = await bcrypt.compare(password, result.rows[0].password_hash);
+    if (!valid) return res.status(401).json({ message: 'Invalid credentials' });
+
+    res.status(200).json({ message: 'Login successful', username: result.rows[0].username });
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+});
 
 app.use('/api', apiRouter); 
 // --------------------------------------------------
