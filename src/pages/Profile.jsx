@@ -5,12 +5,15 @@ function Profile() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
   
-  // Safe Initialization: LocalStorage se parse karte waqt error handle kiya
+  // FINAL SAFE INITIALIZATION
   const [savedUser, setSavedUser] = useState(() => {
     try {
       const user = localStorage.getItem("typelearner_user");
-      return user && user !== "undefined" ? JSON.parse(user) : null;
+      // Agar null, undefined string, ya empty hai, toh return null
+      if (!user || user === "undefined" || user === "null") return null;
+      return JSON.parse(user);
     } catch (e) {
+      console.error("Storage parse error:", e);
       return null;
     }
   });
@@ -42,10 +45,10 @@ function Profile() {
       const data = await response.json();
 
       if (response.ok) {
-        // TOKEN AND USER SAVING FIX
-        localStorage.setItem("typelearner_token", data.token || "no-token");
+        // TOKEN SAVING
+        localStorage.setItem("typelearner_token", data.token || "");
         
-        // Backend se aa rahe username ko object mein wrap karke save kiya
+        // USER OBJECT SAVING - Backend 'username' bhej raha hai
         const userObj = { username: data.username || username };
         localStorage.setItem("typelearner_user", JSON.stringify(userObj));
         
@@ -60,11 +63,11 @@ function Profile() {
     }
   };
 
-  // 1. DASHBOARD VIEW (With Optional Chaining for safety)
+  // DASHBOARD VIEW
   if (savedUser) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#04050b] text-white p-6 pt-24">
-        <h1 className="text-4xl font-bold mb-4">Welcome back, {savedUser?.username || "User"}!</h1>
+        <h1 className="text-4xl font-bold mb-4">Welcome back, {savedUser.username}!</h1>
         <div className="bg-[#080914] p-8 rounded-2xl border border-[#1e1f38] text-center">
           <p className="text-gray-400 mb-6">Your progress is being tracked.</p>
           <button 
@@ -78,7 +81,7 @@ function Profile() {
     );
   }
 
-  // 2. AUTHENTICATION VIEW
+  // AUTHENTICATION VIEW
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#04050b] p-6 pt-24">
       <div className="w-full max-w-md bg-[#080914]/90 backdrop-blur-xl border border-[#1e1f38] rounded-[32px] p-10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
