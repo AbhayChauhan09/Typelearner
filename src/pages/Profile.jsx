@@ -4,6 +4,8 @@ import { useNavigate } from "react-router-dom";
 function Profile() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
+  
+  // 1. useState ko simple null rakho, koi parsing nahi
   const [savedUser, setSavedUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -11,17 +13,22 @@ function Profile() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  // 2. Data loading sirf useEffect mein, jo render hone ke baad chalta hai
   useEffect(() => {
-    const rawData = localStorage.getItem("typelearner_user");
-    if (rawData && rawData !== "undefined" && rawData !== "null") {
+    const checkStorage = () => {
       try {
-        const parsed = JSON.parse(rawData);
-        setSavedUser(parsed);
+        const rawData = localStorage.getItem("typelearner_user");
+        // Sirf tabhi parse karo agar data valid JSON jaisa dikhe
+        if (rawData && rawData !== "undefined" && rawData !== "null") {
+          setSavedUser(JSON.parse(rawData));
+        }
       } catch (e) {
+        console.error("Storage corrupted, clearing...");
         localStorage.removeItem("typelearner_user");
       }
-    }
-    setLoading(false);
+      setLoading(false);
+    };
+    checkStorage();
   }, []);
 
   const handleLogout = () => {
@@ -54,7 +61,7 @@ function Profile() {
         alert(data.message || "Authentication failed.");
       }
     } catch (error) {
-      alert("Server unreachable.");
+      alert("Server error.");
     }
   };
 
