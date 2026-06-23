@@ -7,42 +7,44 @@ function Navbar() {
   const lastScrollY = useRef(0);
   const hideTimer = useRef(null);
 
-  // Function to hide the navbar after 3 seconds
-  const startHideTimer = () => {
+  // Helper to show navbar and start/reset the 3-second timer
+  const showAndResetTimer = () => {
+    setVisible(true);
     clearTimeout(hideTimer.current);
     hideTimer.current = setTimeout(() => {
-      setVisible(false);
-    }, 3000);
+      // Hide only if we are not at the very top
+      if (window.scrollY > 100) {
+        setVisible(false);
+      }
+    }, 3000); // 3 seconds stay
   };
 
   useEffect(() => {
     const handleScroll = () => {
       const currentScrollY = window.scrollY;
 
-      // Show navbar if scrolling UP or at the very top
-      if (currentScrollY < lastScrollY.current || currentScrollY < 10) {
-        setVisible(true);
-        startHideTimer(); // Restart the 3s countdown whenever we scroll
+      // Agar scroll UP kar rahe hain, toh dikhao aur timer restart karo
+      if (currentScrollY < lastScrollY.current || currentScrollY < 100) {
+        showAndResetTimer();
       } 
-      // Hide if scrolling DOWN significantly
-      else if (currentScrollY > 100) {
-        setVisible(false);
+      // Scroll DOWN karte waqt timer expire hone ka wait karo
+      else if (currentScrollY > 100 && visible) {
+        // Hum yahan timer ko allow kar rahe hain 3s tak khatam hone ka
       }
 
       lastScrollY.current = currentScrollY;
     };
 
-    // Listen only to wheel/scroll events
     window.addEventListener("scroll", handleScroll);
     
-    // Initialize the auto-hide timer on mount
-    startHideTimer();
+    // Initial timer start
+    showAndResetTimer();
 
     return () => {
       window.removeEventListener("scroll", handleScroll);
       clearTimeout(hideTimer.current);
     };
-  }, []);
+  }, [visible]);
 
   const navLinkClass = ({ isActive }) =>
     isActive ? "text-purple-500 font-bold" : "text-gray-400 hover:text-white transition";
