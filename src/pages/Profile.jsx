@@ -1,30 +1,30 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 
 function Profile() {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
+  const [savedUser, setSavedUser] = useState(null);
+  const [loading, setLoading] = useState(true);
   
-  // FINAL SAFE INITIALIZATION
-  const [savedUser, setSavedUser] = useState(() => {
-    try {
-      const user = localStorage.getItem("typelearner_user");
-      // Agar null, undefined string, ya empty hai, toh return null
-      if (!user || user === "undefined" || user === "null") return null;
-      return JSON.parse(user);
-    } catch (e) {
-      console.error("Storage parse error:", e);
-      return null;
-    }
-  });
-
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
+  useEffect(() => {
+    try {
+      const user = localStorage.getItem("typelearner_user");
+      if (user && user !== "undefined" && user !== "null") {
+        setSavedUser(JSON.parse(user));
+      }
+    } catch (e) {
+      localStorage.removeItem("typelearner_user");
+    }
+    setLoading(false);
+  }, []);
+
   const handleLogout = () => {
-    localStorage.removeItem("typelearner_token");
-    localStorage.removeItem("typelearner_user");
+    localStorage.clear();
     setSavedUser(null);
     window.location.reload(); 
   };
@@ -43,45 +43,30 @@ function Profile() {
       });
 
       const data = await response.json();
-
       if (response.ok) {
-        // TOKEN SAVING
         localStorage.setItem("typelearner_token", data.token || "");
-        
-        // USER OBJECT SAVING - Backend 'username' bhej raha hai
         const userObj = { username: data.username || username };
         localStorage.setItem("typelearner_user", JSON.stringify(userObj));
-        
         setSavedUser(userObj);
-        window.location.reload(); 
       } else {
         alert(data.message || "Authentication failed.");
       }
     } catch (error) {
-      console.error("Connection error:", error);
       alert("Could not connect to the server.");
     }
   };
 
-  // DASHBOARD VIEW
+  if (loading) return <div className="text-white text-center pt-20">Loading...</div>;
+
   if (savedUser) {
     return (
       <div className="min-h-screen w-full flex flex-col items-center justify-center bg-[#04050b] text-white p-6 pt-24">
         <h1 className="text-4xl font-bold mb-4">Welcome back, {savedUser.username}!</h1>
-        <div className="bg-[#080914] p-8 rounded-2xl border border-[#1e1f38] text-center">
-          <p className="text-gray-400 mb-6">Your progress is being tracked.</p>
-          <button 
-            onClick={handleLogout} 
-            className="bg-red-600 hover:bg-red-700 px-8 py-3 rounded-xl font-bold transition"
-          >
-            Sign Out
-          </button>
-        </div>
+        <button onClick={handleLogout} className="bg-red-600 px-8 py-3 rounded-xl font-bold transition">Sign Out</button>
       </div>
     );
   }
 
-  // AUTHENTICATION VIEW
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-[#04050b] p-6 pt-24">
       <div className="w-full max-w-md bg-[#080914]/90 backdrop-blur-xl border border-[#1e1f38] rounded-[32px] p-10 shadow-[0_0_50px_rgba(0,0,0,0.5)]">
@@ -101,13 +86,8 @@ function Profile() {
             {isLogin ? "INITIALIZE LOGIN" : "REGISTER PROFILE"}
           </button>
         </form>
-
-        <button onClick={() => setIsLogin(!isLogin)} className="w-full text-center text-gray-500 mt-6 text-sm hover:text-purple-400 underline">
-          {isLogin ? "Need an account? Register" : "Have an account? Sign In"}
-        </button>
       </div>
     </div>
   );
 }
-
 export default Profile;
