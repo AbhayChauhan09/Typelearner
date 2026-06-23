@@ -1,6 +1,6 @@
 import express from 'express';
 import cors from 'cors';
-import bcrypt from 'bcryptjs';  
+import bcrypt from 'bcryptjs';
 import pkg from 'pg';
 import dotenv from 'dotenv';
 
@@ -13,7 +13,7 @@ const port = 3000;
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// --- HEALTH CHECK ROUTE ---
+// --- HEALTH CHECK ROUTE (ALB isko check karega) ---
 app.get('/', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'TypeLearner API is running' });
 });
@@ -53,13 +53,14 @@ apiRouter.post('/auth/login', async (req, res) => {
 });
 
 app.use('/api', apiRouter); 
-// --------------------------------------------------
 
+// --- DATABASE POOL ---
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 
     `postgresql://${process.env.DB_USER || 'postgres'}:${encodeURIComponent(process.env.DB_PASSWORD || 'postgres')}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'typing_app'}`,
 });
 
+// --- DB INITIALIZATION ---
 async function initDb() {
   const client = await pool.connect();
   try {
@@ -72,19 +73,13 @@ async function initDb() {
         token TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
-      CREATE TABLE IF NOT EXISTS user_progress (
-        id SERIAL PRIMARY KEY,
-        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        lesson_id INTEGER NOT NULL,
-        completed_at TIMESTAMPTZ DEFAULT NOW(),
-        UNIQUE(user_id, lesson_id)
-      );
     `);
   } finally {
     client.release();
   }
 }
 
+// --- SERVER STARTUP ---
 async function start() {
   console.log("Starting server...");
   let connected = false;
@@ -100,9 +95,14 @@ async function start() {
     }
   }
 
-  app.listen(port, '0.0.0.0', () => 
+  const server = app.listen(port, '0.0.0.0', () => 
     console.log(`TypeLearner API is running on port ${port}`)
   );
+
+  // Graceful Shutdown
+  process.on('SIGTERM', () => {
+    server.close(() => { pool.end(); });
+  });
 }
 
 start().catch((error) => {
