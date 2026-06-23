@@ -1,11 +1,8 @@
 import express from 'express';
 import cors from 'cors';
-import crypto from 'crypto';
-import bcrypt from 'bcryptjs';
 import pkg from 'pg';
 import dotenv from 'dotenv';
 
-// Load environment variables
 dotenv.config();
 const { Pool } = pkg;
 
@@ -15,16 +12,31 @@ const port = 3000;
 app.use(cors({ origin: '*' }));
 app.use(express.json());
 
-// --- HEALTH CHECK ROUTE (Added for AWS ALB) ---
+// --- HEALTH CHECK ROUTE ---
 app.get('/', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'TypeLearner API is running' });
 });
-// ----------------------------------------------
 
-// Database configuration
+ 
+const apiRouter = express.Router();
+
+apiRouter.post('/auth/login', async (req, res) => {
+  // Yahan apna Login logic likhein
+  res.status(200).json({ message: "Login logic here" });
+});
+
+apiRouter.post('/auth/register', async (req, res) => {
+  // Yahan apna Register logic likhein
+  res.status(200).json({ message: "Register logic here" });
+});
+
+
+app.use('/api', apiRouter); 
+// --------------------------------------------------
+
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL || 
-    `postgresql://${process.env.DB_USER || 'postgres'}:${encodeURIComponent(process.env.DB_PASSWORD || 'postgres')}@${process.env.DB_HOST || '127.0.0.1'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'typing_app'}`,
+    `postgresql://${process.env.DB_USER || 'postgres'}:${encodeURIComponent(process.env.DB_PASSWORD || 'postgres')}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'typing_app'}`,
 });
 
 async function initDb() {
@@ -51,8 +63,6 @@ async function initDb() {
     client.release();
   }
 }
-
-// Routes (Yahan apne baki routes add karein, e.g., app.post('/register', ...))
 
 async function start() {
   console.log("Starting server...");
