@@ -40,3 +40,7 @@ jobs:
         run: |
           docker build -t $ECR_REGISTRY/typelearner-repository-backend:latest ./server
           docker push $ECR_REGISTRY/typelearner-repository-backend:latest
+
+
+
+#for testing
