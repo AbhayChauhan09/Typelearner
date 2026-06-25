@@ -1,7 +1,9 @@
 variable "region" {
-  default = "us-east-1"
+  description = "AWS region for deployment"
+  default     = "us-east-1"
 }
 
 variable "project_name" {
-  default = "typelearner"
+  description = "Name of the project"
+  default     = "typelearner"
 }
