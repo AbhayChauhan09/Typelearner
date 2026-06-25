@@ -58,9 +58,9 @@ resource "aws_security_group" "ecs_sg" {
   }
 }
 
-# 6. ECR Repository
-resource "aws_ecr_repository" "app_repo" {
-  name = "${var.project_name}-repo"
+ 
+resource "aws_ecr_repository" "app_repository" {
+  name = "${var.project_name}-repository"
 }
 
 # 7. ECS Cluster
