@@ -1,13 +1,11 @@
-name: Build and Push to ECR
+name: Build and Push to ECR and Deploy to ECS
 
 on:
   pull_request:
     types: [closed]
     branches: [ main ]
-
 jobs:
-  build-and-push:
-   
+  build-and-deploy:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
@@ -25,7 +23,6 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Build and push Frontend
       - name: Build and push Frontend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -33,7 +30,6 @@ jobs:
           docker build -t $ECR_REGISTRY/typelearner-frontend:latest .
           docker push $ECR_REGISTRY/typelearner-frontend:latest
 
-      # Build and push Backend
       - name: Build and push Backend
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
@@ -41,6 +37,6 @@ jobs:
           docker build -t $ECR_REGISTRY/typelearner-repository-backend:latest ./server
           docker push $ECR_REGISTRY/typelearner-repository-backend:latest
 
-
-
-#for testing
+      - name: Force new ECS deployment
+        run: |
+          aws ecs update-service --cluster typelearner-cluster --service typelearner-service --force-new-deployment
