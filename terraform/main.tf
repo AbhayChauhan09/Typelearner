@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 # ---------------------------------------------------------
-# 1. NETWORKING (VPC, IGW, 2 Subnets, Route Table)
+# 1. NETWORKING
 # ---------------------------------------------------------
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
@@ -52,7 +52,7 @@ resource "aws_route_table_association" "public_assoc_2" {
 }
 
 # ---------------------------------------------------------
-# 2. SECURITY GROUPS (ALB & ECS)
+# 2. SECURITY GROUPS
 # ---------------------------------------------------------
 resource "aws_security_group" "alb_sg" {
   name   = "${var.project_name}-alb-sg"
@@ -89,7 +89,7 @@ resource "aws_security_group" "ecs_sg" {
 }
 
 # ---------------------------------------------------------
-# 3. IAM ROLE (ECS Task Execution)
+# 3. IAM ROLE
 # ---------------------------------------------------------
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "${var.project_name}-ecs-task-execution-role"
@@ -109,7 +109,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 }
 
 # ---------------------------------------------------------
-# 4. LOAD BALANCER & ROUTING (Multi-Port)
+# 4. LOAD BALANCER & ROUTING (Fixed Health Check)
 # ---------------------------------------------------------
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
@@ -134,7 +134,7 @@ resource "aws_lb_target_group" "backend_tg" {
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
-  health_check { path = "/api" } 
+  health_check { path = "/" } # FIXED: Changed from /api to /
 }
 
 resource "aws_lb_listener" "listener" {
@@ -169,16 +169,6 @@ resource "aws_ecr_repository" "frontend_repo" {
 resource "aws_ecr_repository" "backend_repo" {
   name = "typelearner-repository-backend"
   force_delete = true
-}
-
-resource "null_resource" "remove_ecr_images" {
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      aws ecr batch-delete-image --repository-name typelearner-frontend --image-ids imageTag=latest --region us-east-1 || true
-      aws ecr batch-delete-image --repository-name typelearner-repository-backend --image-ids imageTag=latest --region us-east-1 || true
-    EOT
-  }
 }
 
 # ---------------------------------------------------------
@@ -244,4 +234,5 @@ resource "aws_ecs_service" "app_service" {
     container_name   = "backend"
     container_port   = 3000
   }
+  depends_on = [aws_lb_listener.listener]
 }
