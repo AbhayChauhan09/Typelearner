@@ -3,7 +3,7 @@ provider "aws" {
 }
 
 # ---------------------------------------------------------
-# 1. NETWORKING (VPC, IGW, 2 Subnets, Route Table)
+# 1. NETWORKING
 # ---------------------------------------------------------
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
@@ -52,19 +52,17 @@ resource "aws_route_table_association" "public_assoc_2" {
 }
 
 # ---------------------------------------------------------
-# 2. SECURITY GROUPS (ALB & ECS)
+# 2. SECURITY GROUPS
 # ---------------------------------------------------------
 resource "aws_security_group" "alb_sg" {
   name   = "${var.project_name}-alb-sg"
   vpc_id = aws_vpc.main.id
-
   ingress {
     from_port   = 80
     to_port     = 80
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -76,14 +74,12 @@ resource "aws_security_group" "alb_sg" {
 resource "aws_security_group" "ecs_sg" {
   name   = "${var.project_name}-ecs-sg"
   vpc_id = aws_vpc.main.id
-
   ingress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.alb_sg.id] # Only allow traffic from ALB
+    from_port       = 0
+    to_port         = 0
+    protocol        = "-1"
+    security_groups = [aws_security_group.alb_sg.id]
   }
-
   egress {
     from_port   = 0
     to_port     = 0
@@ -93,19 +89,16 @@ resource "aws_security_group" "ecs_sg" {
 }
 
 # ---------------------------------------------------------
-# 3. IAM ROLE (ECS Task Execution)
+# 3. IAM ROLE
 # ---------------------------------------------------------
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "${var.project_name}-ecs-task-execution-role"
-
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
     Statement = [{
       Action = "sts:AssumeRole"
       Effect = "Allow"
-      Principal = {
-        Service = "ecs-tasks.amazonaws.com"
-      }
+      Principal = { Service = "ecs-tasks.amazonaws.com" }
     }]
   })
 }
@@ -116,7 +109,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 }
 
 # ---------------------------------------------------------
-# 4. LOAD BALANCER (ALB, Target Group, Listener)
+# 4. LOAD BALANCER & ROUTING (Fixed Health Check)
 # ---------------------------------------------------------
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
@@ -127,29 +120,41 @@ resource "aws_lb" "main" {
 }
 
 resource "aws_lb_target_group" "frontend_tg" {
-  name        = "${var.project_name}-tg"
-  port        = 80
+  name        = "${var.project_name}-tg-front"
+  port        = 5757
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
-
-  health_check {
-    path                = "/"
-    interval            = 30
-    timeout             = 5
-    healthy_threshold   = 2
-    unhealthy_threshold = 2
-  }
+  health_check { path = "/" }
 }
 
-resource "aws_lb_listener" "frontend_listener" {
+resource "aws_lb_target_group" "backend_tg" {
+  name        = "${var.project_name}-tg-back"
+  port        = 3000
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+  health_check { path = "/" } # FIXED: Changed from /api to /
+}
+
+resource "aws_lb_listener" "listener" {
   load_balancer_arn = aws_lb.main.arn
   port              = "80"
   protocol          = "HTTP"
-
   default_action {
     type             = "forward"
     target_group_arn = aws_lb_target_group.frontend_tg.arn
+  }
+}
+
+resource "aws_lb_listener_rule" "backend_rule" {
+  listener_arn = aws_lb_listener.listener.arn
+  action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.backend_tg.arn
+  }
+  condition {
+    path_pattern { values = ["/api/*"] }
   }
 }
 
@@ -157,30 +162,17 @@ resource "aws_lb_listener" "frontend_listener" {
 # 5. ECR REPOSITORIES
 # ---------------------------------------------------------
 resource "aws_ecr_repository" "frontend_repo" {
-  name                 = "typelearner-frontend"
-  image_tag_mutability = "MUTABLE"
+  name = "typelearner-frontend"
   force_delete = true
 }
 
 resource "aws_ecr_repository" "backend_repo" {
-  name                 = "typelearner-repository-backend"
-  image_tag_mutability = "MUTABLE"
+  name = "typelearner-repository-backend"
   force_delete = true
 }
 
-resource "null_resource" "remove_ecr_images" {
-  # Destroy hone se pehle ye script chalegi
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      aws ecr batch-delete-image --repository-name typelearner-frontend --image-ids imageTag=latest --region us-east-1 || true
-      aws ecr batch-delete-image --repository-name typelearner-repository-backend --image-ids imageTag=latest --region us-east-1 || true
-    EOT
-  }
-}
-
 # ---------------------------------------------------------
-# 6. ECS CLUSTER, TASK & SERVICE
+# 6. ECS CLUSTER, TASK & SERVICE (3-Container Setup)
 # ---------------------------------------------------------
 resource "aws_ecs_cluster" "cluster" {
   name = "${var.project_name}-cluster"
@@ -190,23 +182,35 @@ resource "aws_ecs_task_definition" "app_task" {
   family                   = "typelearner-task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "256"
-  memory                   = "512"
+  cpu                      = "1024"
+  memory                   = "2048"
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
 
   container_definitions = jsonencode([
     {
-      name      = "typelearner-container"
-      image     = "${aws_ecr_repository.frontend_repo.repository_url}:latest"
-      portMappings = [
-        {
-          containerPort = 80
-          hostPort      = 80
-        }
+      name  = "frontend",
+      image = "${aws_ecr_repository.frontend_repo.repository_url}:latest",
+      portMappings = [{ containerPort = 5757, hostPort = 5757 }]
+    },
+    {
+      name  = "backend",
+      image = "${aws_ecr_repository.backend_repo.repository_url}:latest",
+      portMappings = [{ containerPort = 3000, hostPort = 3000 }],
+      environment  = [{ name = "DB_HOST", value = "localhost" }]
+    },
+    {
+      name  = "database",
+      image = "postgres:latest",
+      portMappings = [{ containerPort = 5432, hostPort = 5432 }],
+      environment  = [
+        { name = "POSTGRES_USER", value = "admin" },
+        { name = "POSTGRES_PASSWORD", value = "password" },
+        { name = "POSTGRES_DB", value = "typelearnerdb" }
       ]
     }
   ])
 }
+
 resource "aws_ecs_service" "app_service" {
   name            = "${var.project_name}-service"
   cluster         = aws_ecs_cluster.cluster.id
@@ -222,19 +226,13 @@ resource "aws_ecs_service" "app_service" {
 
   load_balancer {
     target_group_arn = aws_lb_target_group.frontend_tg.arn
-    container_name   = "typelearner-container"
-    container_port   = 80
+    container_name   = "frontend"
+    container_port   = 5757
   }
-
-  depends_on = [aws_lb_listener.frontend_listener]
-}
-
-resource "null_resource" "cleanup_ecr" {
-  provisioner "local-exec" {
-    when    = destroy
-    command = <<EOT
-      aws ecr batch-delete-image --repository-name typelearner-frontend --image-ids imageTag=latest || true
-      aws ecr batch-delete-image --repository-name typelearner-repository-backend --image-ids imageTag=latest || true
-    EOT
+  load_balancer {
+    target_group_arn = aws_lb_target_group.backend_tg.arn
+    container_name   = "backend"
+    container_port   = 3000
   }
+  depends_on = [aws_lb_listener.listener]
 }
