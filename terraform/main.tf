@@ -109,7 +109,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
 }
 
 # ---------------------------------------------------------
-# 4. LOAD BALANCER & ROUTING (Fixed Health Check)
+# 4. LOAD BALANCER & ROUTING
 # ---------------------------------------------------------
 resource "aws_lb" "main" {
   name               = "${var.project_name}-alb"
@@ -134,7 +134,12 @@ resource "aws_lb_target_group" "backend_tg" {
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
   target_type = "ip"
-  health_check { path = "/" } # FIXED: Changed from /api to /
+  health_check { 
+    path                = "/"
+    interval            = 60
+    timeout             = 30
+    unhealthy_threshold = 5
+  }
 }
 
 resource "aws_lb_listener" "listener" {
@@ -162,17 +167,27 @@ resource "aws_lb_listener_rule" "backend_rule" {
 # 5. ECR REPOSITORIES
 # ---------------------------------------------------------
 resource "aws_ecr_repository" "frontend_repo" {
-  name = "typelearner-frontend"
+  name         = "typelearner-frontend"
   force_delete = true
 }
 
 resource "aws_ecr_repository" "backend_repo" {
-  name = "typelearner-repository-backend"
+  name         = "typelearner-repository-backend"
   force_delete = true
 }
 
+resource "null_resource" "remove_ecr_images" {
+  provisioner "local-exec" {
+    when    = destroy
+    command = <<EOT
+      aws ecr batch-delete-image --repository-name typelearner-frontend --image-ids imageTag=latest --region us-east-1 || true
+      aws ecr batch-delete-image --repository-name typelearner-repository-backend --image-ids imageTag=latest --region us-east-1 || true
+    EOT
+  }
+}
+
 # ---------------------------------------------------------
-# 6. ECS CLUSTER, TASK & SERVICE (3-Container Setup)
+# 6. ECS CLUSTER, TASK & SERVICE
 # ---------------------------------------------------------
 resource "aws_ecs_cluster" "cluster" {
   name = "${var.project_name}-cluster"
@@ -196,12 +211,20 @@ resource "aws_ecs_task_definition" "app_task" {
       name  = "backend",
       image = "${aws_ecr_repository.backend_repo.repository_url}:latest",
       portMappings = [{ containerPort = 3000, hostPort = 3000 }],
-      environment  = [{ name = "DB_HOST", value = "localhost" }]
+      essential    = true,
+      environment  = [
+        { name = "DB_HOST", value = "127.0.0.1" },
+        { name = "DB_USER", value = "admin" },
+        { name = "DB_PASSWORD", value = "password" },
+        { name = "DB_NAME", value = "typelearnerdb" },
+        { name = "DB_PORT", value = "5432" }
+      ]
     },
     {
       name  = "database",
       image = "postgres:latest",
       portMappings = [{ containerPort = 5432, hostPort = 5432 }],
+      essential    = true,
       environment  = [
         { name = "POSTGRES_USER", value = "admin" },
         { name = "POSTGRES_PASSWORD", value = "password" },
@@ -217,13 +240,11 @@ resource "aws_ecs_service" "app_service" {
   task_definition = aws_ecs_task_definition.app_task.arn
   desired_count   = 1
   launch_type     = "FARGATE"
-
   network_configuration {
     subnets          = [aws_subnet.public_subnet_1.id, aws_subnet.public_subnet_2.id]
     assign_public_ip = true
     security_groups  = [aws_security_group.ecs_sg.id]
   }
-
   load_balancer {
     target_group_arn = aws_lb_target_group.frontend_tg.arn
     container_name   = "frontend"
